@@ -1,0 +1,16 @@
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\bin\Debug\RobotSystem.exe.config
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\bin\Debug\RobotSystem.exe
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\bin\Debug\RobotSystem.pdb
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.csproj.AssemblyReference.cache
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.csproj.SuggestedBindingRedirects.cache
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\MainWindow.g.cs
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\App.g.cs
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem_MarkupCompile.cache
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem_MarkupCompile.lref
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\MainWindow.baml
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.g.resources
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.Properties.Resources.resources
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.csproj.GenerateResource.cache
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.csproj.CoreCompileInputs.cache
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.exe
+D:\GitHub\RobotSystem\RobotSystem\RobotSystem\obj\Debug\RobotSystem.pdb

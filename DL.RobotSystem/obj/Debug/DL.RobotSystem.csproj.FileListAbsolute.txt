@@ -1,0 +1,12 @@
+D:\GitHub\RobotSystem\RobotSystem\DL.RobotSystem\bin\Debug\DL.RobotSystem.dll
+D:\GitHub\RobotSystem\RobotSystem\DL.RobotSystem\bin\Debug\DL.RobotSystem.pdb
+D:\GitHub\RobotSystem\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.csproj.AssemblyReference.cache
+D:\GitHub\RobotSystem\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.csproj.CoreCompileInputs.cache
+D:\GitHub\RobotSystem\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.dll
+D:\GitHub\RobotSystem\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.pdb
+D:\GitHub\RobotSystem\DL.RobotSystem\bin\Debug\DL.RobotSystem.dll
+D:\GitHub\RobotSystem\DL.RobotSystem\bin\Debug\DL.RobotSystem.pdb
+D:\GitHub\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.csproj.AssemblyReference.cache
+D:\GitHub\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.csproj.CoreCompileInputs.cache
+D:\GitHub\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.dll
+D:\GitHub\RobotSystem\DL.RobotSystem\obj\Debug\DL.RobotSystem.pdb
