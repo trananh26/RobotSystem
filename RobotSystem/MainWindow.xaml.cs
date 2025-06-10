@@ -24,5 +24,83 @@ namespace RobotSystem
         {
             InitializeComponent();
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnCrCommand_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+
+        private void btnCommandHistory_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+
+        }
+
+        private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+
+        }
+
+        private void btnSetting_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnHelp_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnExit_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void dtgCrCommand_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
+        {
+
+        }
+
+        private void btnAddCommand_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnDeleteCommand_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnManualControl_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+
+
+        private void btnReport_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btnDashboard_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void dtgCommandHistory_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
+        {
+
+        }
     }
 }
