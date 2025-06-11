@@ -34,4 +34,8 @@ D:\GitHub\RobotSystem\RobotSystem\bin\Debug\System.Threading.Tasks.Extensions.xm
 D:\GitHub\RobotSystem\RobotSystem\bin\Debug\Twilio.xml
 D:\GitHub\RobotSystem\RobotSystem\obj\Debug\App.baml
 D:\GitHub\RobotSystem\RobotSystem\obj\Debug\View\ArcGauge.baml
-D:\GitHub\RobotSystem\RobotSystem\obj\Debug\RobotSystem.csproj.CopyComplete
+D:\Github\RobotSystem\RobotSystem\bin\Debug\Microsoft.Xaml.Behaviors.dll
+D:\Github\RobotSystem\RobotSystem\bin\Debug\MaterialDesignColors.pdb
+D:\Github\RobotSystem\RobotSystem\bin\Debug\MaterialDesignThemes.Wpf.pdb
+D:\Github\RobotSystem\RobotSystem\bin\Debug\Microsoft.Xaml.Behaviors.pdb
+D:\Github\RobotSystem\RobotSystem\obj\Debug\RobotSys.5C6D2F24.Up2Date

@@ -148,6 +148,7 @@
                 <RowDefinition Height="0.1*"/>
                 <RowDefinition Height="1*"/>
                 <RowDefinition Height="7*"/>
+                <RowDefinition Height="0.3*"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="1" >
                 <Grid>
@@ -394,7 +395,91 @@
                 </Grid>
             </Grid>
             <Grid Grid.Row="2">
+                <Grid x:Name="Grid_Vision">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="3*"/>
+                            <RowDefinition Height="1*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Background="DarkOrange">
+                            <Image x:Name="img_InputImage" Grid.Row="0" Grid.Column="0" Stretch="Fill"/>
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <DataGrid x:Name="dtg_Result" IsReadOnly="True" 
+                                  SelectedCellsChanged="dtgVision_SelectedCellsChanged"/>
+                        </Grid>
+                    </Grid>
+                    <Grid Grid.Column="1" >
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="1*"/>
+                            <RowDefinition Height="0.5*"/>
+                            <RowDefinition Height="0.3*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Background="DarkGreen">
+                            <Image x:Name="img_Camera" Grid.Row="0" Grid.Column="0" Stretch="Fill"/>
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <TextBlock Text="OK" FontSize="110" FontWeight="DemiBold"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center" Height="125"/>
+                        </Grid>
+                        <Grid Grid.Row="2" Background="DarkGray">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="1*"/>
+                                <RowDefinition Height="1*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" >
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0" >
+                                    <Button Width="180" Height="50"/>
+                                </Grid>
+                                
+                                <Grid Grid.Column="1" >
+                                    <Button Width="180" Height="50"/>
+                                </Grid>
+
+                                <Grid Grid.Column="2" >
+                                    <Button Width="180" Height="50"/>
+                                </Grid>
+                            </Grid>
+
+                            <Grid Grid.Row="1" >
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0" >
+                                    <Button Width="180" Height="50"/>
+                                </Grid>
+
+                                <Grid Grid.Column="1" >
+                                    <Button Width="180" Height="50"/>
+                                </Grid>
+                                
+                                <Grid Grid.Column="2" >
+                                    <Button Width="180" Height="50"/>
+                                </Grid>
+                            </Grid>
+
+                        </Grid>
+                    </Grid>
+
+                </Grid>
+
+
+
                 <!--Map hoạt động chính-->
+                <!--
                 <Grid x:Name="Grid_Map" Background="AliceBlue">
                     <Rectangle Width="1" HorizontalAlignment="Left"/>
 
@@ -409,7 +494,9 @@
                     </StackPanel>
                 </Grid>
 
+                -->
                 <!--Danh sách lệnh đang thực hiện-->
+                <!--
                 <Grid x:Name="Grid_CurrentCommand" Background="#E8E8E8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="1.5*"/>
@@ -456,7 +543,9 @@
                 </Grid>
 
 
+                -->
                 <!--Lịch sử lệnh-->
+                <!--
 
                 <Grid x:Name="Grid_CommandHistory" Background="#E8E8E8">
                     <Grid.RowDefinitions>
@@ -501,9 +590,15 @@
                                     FontSize="14" Foreground="White" Grid.Column="1"></Button>
                         </Grid>
                     </Grid>
-                </Grid>
+                </Grid>-->
+
 
             </Grid>
+            <Grid Grid.Row="3">
+                <TextBlock Text="Copyright © 2023 - 2025 MECA HAUI" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            </Grid>
         </Grid>
+
+
     </Grid>
 </Window>
