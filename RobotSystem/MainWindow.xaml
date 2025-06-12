@@ -397,7 +397,7 @@
             <Grid Grid.Row="2">
                 <Grid x:Name="Grid_Vision">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="3*"/>
+                        <ColumnDefinition Width="950"/>
                         <ColumnDefinition Width="2*"/>
                     </Grid.ColumnDefinitions>
                     <Grid Grid.Column="0">
@@ -406,7 +406,9 @@
                             <RowDefinition Height="1*"/>
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Background="DarkOrange">
-                            <Image x:Name="img_InputImage" Grid.Row="0" Grid.Column="0" Stretch="Fill"/>
+                            <Grid>
+                                <Image x:Name="img_InputImage" Grid.Row="0" Grid.Column="0" Stretch="Uniform"/>
+                            </Grid>
                         </Grid>
                         <Grid Grid.Row="1">
                             <DataGrid x:Name="dtg_Result" IsReadOnly="True" 

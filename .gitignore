@@ -39,3 +39,5 @@
 /RobotSystem/obj/Debug/RobotSystem.pdb
 /RobotSystem/obj/Debug/RobotSystem_MarkupCompile.i.cache
 /RobotSystem/obj/Debug/RobotSystem_MarkupCompile.i.lref
+/packages
+/Common.RobotSystem/obj/Debug/Common.RobotSystem.csproj.AssemblyReference.cache

@@ -16,6 +16,14 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Emgu.CV;
+using Emgu.CV.Structure;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Util;
+using System.IO;
+using System.Text.Json;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
 
 namespace RobotSystem
 {
@@ -33,6 +41,19 @@ namespace RobotSystem
         private int psWait;
         private const int MAX_RETRY_ATTEMPTS = 3;
         private const int RETRY_DELAY_MS = 1000;
+        private const string TRAINING_HISTORY_FILE = "training_history.json";
+        private string templateFolder = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TemplateData");
+
+        public class ComponentRegion
+        {
+            public Rect Region { get; set; }
+            public string ComponentType { get; set; }
+        }
+
+        public class TrainingHistory
+        {
+            public Dictionary<string, List<Rect>> ComponentRegions { get; set; } = new Dictionary<string, List<Rect>>();
+        }
 
         public MainWindow()
         {
@@ -252,6 +273,9 @@ namespace RobotSystem
                     bitmap.UriSource = new Uri(openFileDialog.FileName);
                     bitmap.EndInit();
                     img_InputImage.Source = bitmap;
+
+                    // Thực hiện nhận dạng
+                    DetectComponents(openFileDialog.FileName);
                 }
                 catch (Exception ex)
                 {
@@ -262,7 +286,127 @@ namespace RobotSystem
 
         private void btn_TakeImage_Click(object sender, RoutedEventArgs e)
         {
+            //if (captureDevice != null && captureDevice.IsRunning)
+            //{
+            //    try
+            //    {
+            //        // Lấy frame hiện tại từ camera
+            //        using (Bitmap currentFrame = (Bitmap)captureDevice.GetCurrentVideoFrame())
+            //        {
+            //            if (currentFrame != null)
+            //            {
+            //                // Chuyển đổi sang BitmapImage để hiển thị
+            //                BitmapImage bitmap = new BitmapImage();
+            //                using (MemoryStream ms = new MemoryStream())
+            //                {
+            //                    currentFrame.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+            //                    ms.Position = 0;
+            //                    bitmap.BeginInit();
+            //                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            //                    bitmap.StreamSource = ms;
+            //                    bitmap.EndInit();
+            //                }
+            //                img_InputImage.Source = bitmap;
 
+            //                // Lưu ảnh tạm thời để xử lý
+            //                string tempImagePath = "temp_capture.jpg";
+            //                currentFrame.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+            //                // Thực hiện nhận dạng
+            //                DetectComponents(tempImagePath);
+
+            //                // Xóa file tạm
+            //                if (File.Exists(tempImagePath))
+            //                {
+            //                    File.Delete(tempImagePath);
+            //                }
+            //            }
+            //        }
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        MessageBox.Show($"Lỗi khi chụp ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            //    }
+            //}
+            //else
+            //{
+            //    MessageBox.Show("Camera chưa được kết nối!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+            //}
+        }
+
+        private void DetectComponents(string imagePath)
+        {
+            try
+            {
+                if (!Directory.Exists(templateFolder))
+                {
+                    MessageBox.Show("Chưa có dữ liệu template!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                var templateFiles = Directory.GetFiles(templateFolder, "*.png");
+                if (templateFiles.Length == 0)
+                {
+                    MessageBox.Show("Không có template nào!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                using (Image<Bgr, byte> img = new Image<Bgr, byte>(imagePath))
+                {
+                    var results = new List<object>();
+                    var rectsToDraw = new List<(string label, System.Drawing.Rectangle rect)>();
+                    foreach (var file in templateFiles)
+                    {
+                        string label = System.IO.Path.GetFileName(file).Split('_')[0];
+                        using (Image<Bgr, byte> template = new Image<Bgr, byte>(file))
+                        {
+                            using (Image<Gray, float> result = img.MatchTemplate(template, TemplateMatchingType.CcoeffNormed))
+                            {
+                                double minVal = 0, maxVal = 0;
+                                System.Drawing.Point minLoc = new System.Drawing.Point(), maxLoc = new System.Drawing.Point();
+                                CvInvoke.MinMaxLoc(result, ref minVal, ref maxVal, ref minLoc, ref maxLoc);
+                                if (maxVal > 0.8)
+                                {
+                                    // Vẽ rectangle lên ảnh gốc
+                                    CvInvoke.Rectangle(
+                                        img,
+                                        new System.Drawing.Rectangle(maxLoc.X, maxLoc.Y, template.Width, template.Height),
+                                        new MCvScalar(0, 255, 0), 2);
+
+                                    results.Add(new
+                                    {
+                                        ComponentType = label,
+                                        Confidence = maxVal,
+                                        Location = new System.Windows.Rect(maxLoc.X, maxLoc.Y, template.Width, template.Height)
+                                    });
+                                    rectsToDraw.Add((label, new System.Drawing.Rectangle(maxLoc.X, maxLoc.Y, template.Width, template.Height)));
+                                }
+                            }
+                        }
+                    }
+                    img_InputImage.Source = ConvertToBitmapSource(img.ToBitmap());
+                    dtg_Result.ItemsSource = results;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi nhận dạng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private BitmapSource ConvertToBitmapSource(Bitmap bitmap)
+        {
+            var handle = bitmap.GetHbitmap();
+            try
+            {
+                return System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                    handle,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
+            }
+            finally
+            {
+                DeleteObject(handle);
+            }
         }
 
         private void btn_Train_Click(object sender, RoutedEventArgs e)
