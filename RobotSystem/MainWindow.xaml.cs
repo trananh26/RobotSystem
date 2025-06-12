@@ -27,7 +27,7 @@ namespace RobotSystem
         private FilterInfoCollection filterInfo;
         private VideoCaptureDevice captureDevice;
         private System.Timers.Timer timer;
-        private ActUtlType PLC = new ActUtlType();
+        //private ActUtlType PLC = new ActUtlType();
         private string IP_PLC = "192.168.1.250";
         private string _oldQRCode;
         private int psWait;
@@ -41,8 +41,8 @@ namespace RobotSystem
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            ConnectPLC();
-            ConnectCamera();
+            //ConnectPLC();
+            //ConnectCamera();
         }
 
         private void ConnectPLC()
@@ -102,7 +102,7 @@ namespace RobotSystem
                 {
                     captureDevice.SignalToStop();
                     captureDevice.WaitForStop();
-                    captureDevice.NewFrame -= CaptureDevice_NewFrame;
+                    captureDevice.NewFrame += CaptureDevice_NewFrame;
                 }
             }
             catch (Exception ex)
@@ -183,8 +183,8 @@ namespace RobotSystem
         {
             try
             {
-                PLC.Close();
-                DisconnectCamera();
+                //PLC.Close();
+                //DisconnectCamera();
             }
             catch (Exception ex)
             {
@@ -230,6 +230,63 @@ namespace RobotSystem
         }
 
         private void dtgVision_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
+        {
+
+        }
+
+        private void btn_OpenImage_Click(object sender, RoutedEventArgs e)
+        {
+            Microsoft.Win32.OpenFileDialog openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Image files (*.jpg;*.jpeg;*.png;*.bmp)|*.jpg;*.jpeg;*.png;*.bmp|All files (*.*)|*.*",
+                Title = "Chọn ảnh"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    BitmapImage bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.UriSource = new Uri(openFileDialog.FileName);
+                    bitmap.EndInit();
+                    img_InputImage.Source = bitmap;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi mở ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void btn_TakeImage_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btn_Train_Click(object sender, RoutedEventArgs e)
+        {
+            ImageSource sourceImage = null;
+            if (img_InputImage.Source != null)
+            {
+                sourceImage = img_InputImage.Source;
+            }
+
+            var trainWindow = new wdTrainModel(sourceImage);
+            if (trainWindow.ShowDialog() == true)
+            {
+                // TODO: Xử lý kết quả huấn luyện
+                MessageBox.Show("Huấn luyện thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void btn_Pass_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void btn_Fail_Click(object sender, RoutedEventArgs e)
         {
 
         }

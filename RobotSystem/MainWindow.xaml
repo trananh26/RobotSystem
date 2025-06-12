@@ -439,15 +439,21 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Grid Grid.Column="0" >
-                                    <Button Width="180" Height="50"/>
+                                    <Button x:Name="btn_OpenImage" Content="Chọn ảnh" FontSize="18"
+                                            Click="btn_OpenImage_Click"
+                                        Width="180" Height="50"/>
                                 </Grid>
-                                
+
                                 <Grid Grid.Column="1" >
-                                    <Button Width="180" Height="50"/>
+                                    <Button x:Name="btn_TakeImage" Content="Chụp ảnh" FontSize="18"
+                                            Click="btn_TakeImage_Click"                                        
+                                            Width="180" Height="50"/>
                                 </Grid>
 
                                 <Grid Grid.Column="2" >
-                                    <Button Width="180" Height="50"/>
+                                    <Button x:Name="btn_Train" Content="Huấn luyện" FontSize="18"
+                                            Click="btn_Train_Click"
+                                            Width="180" Height="50"/>
                                 </Grid>
                             </Grid>
 
@@ -463,11 +469,15 @@
                                 </Grid>
 
                                 <Grid Grid.Column="1" >
-                                    <Button Width="180" Height="50"/>
+                                    <Button x:Name="btn_Pass" Content="Cho Pass" FontSize="18"
+                                            Click="btn_Pass_Click"
+                                            Width="180" Height="50"/>
                                 </Grid>
-                                
+
                                 <Grid Grid.Column="2" >
-                                    <Button Width="180" Height="50"/>
+                                    <Button x:Name="btn_Fail" Content="Cho Fail" FontSize="18"
+                                            Click="btn_Fail_Click"
+                                            Width="180" Height="50"/>
                                 </Grid>
                             </Grid>
 

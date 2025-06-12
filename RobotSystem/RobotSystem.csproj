@@ -180,6 +180,9 @@
     <Compile Include="View\ArcGauge.xaml.cs">
       <DependentUpon>ArcGauge.xaml</DependentUpon>
     </Compile>
+    <Compile Include="wdTrainModel.xaml.cs">
+      <DependentUpon>wdTrainModel.xaml</DependentUpon>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -193,6 +196,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="View\ArcGauge.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="wdTrainModel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
