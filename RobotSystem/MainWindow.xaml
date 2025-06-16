@@ -36,6 +36,7 @@
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
+                <RowDefinition Height="2*"/>
                 <RowDefinition Height="10*"/>
                 <RowDefinition Height="1.5*"/>
             </Grid.RowDefinitions>
@@ -49,11 +50,22 @@
                 </Button>
                 <md:PackIcon Kind="ViewDashboardOutline" Width="35" Height="35" VerticalAlignment="Center" 
                                          MouseDown="btnDashboard_Click" Margin="30,0,0,0" Background="#2E4053"/>
-                <TextBlock Text="Dashboard" FontSize="16" Height="20" Margin="90,0,0,0" Foreground="White"
+                <TextBlock Text="Computer Vision" FontSize="16" Height="20" Margin="90,0,0,0" Foreground="White"
                            MouseDown="btnDashboard_Click"/>
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
             <Grid Grid.Row="2" Background="#2E4053">
+                <Button Height="69"  Background="#2E4053" BorderBrush="#2E4053"
+                        x:Name="btnAGV" Click="btnAGV_Click" />
+
+                <md:PackIcon Kind="RobotAngry" Width="35" Height="35" VerticalAlignment="Center" 
+                                         MouseDown="btnAGV_Click" Margin="30,0,0,0" Background="#2E4053"/>
+                <TextBlock Text="Robot Operation" FontSize="16" Height="20" Margin="90,0,0,0" Foreground="White"
+                           MouseDown="btnAGV_Click"/>
+                <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
+            </Grid>
+            
+            <Grid Grid.Row="3" Background="#2E4053">
                 <Button Height="69"  Background="#2E4053" BorderBrush="#2E4053"
                         x:Name="btnCrCommand" Click="btnCrCommand_Click">
                 </Button>
@@ -63,7 +75,7 @@
                            MouseDown="btnCrCommand_Click" Margin="90,0,0,0"/>
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
-            <Grid Grid.Row="3" Background="#2E4053">
+            <Grid Grid.Row="4" Background="#2E4053">
                 <Button Height="69"  Background="#2E4053" BorderBrush="#2E4053"
                         x:Name="btnHistory" Click="btnCommandHistory_Click">
                 </Button>
@@ -73,7 +85,7 @@
                                MouseDown="btnCommandHistory_Click" Foreground="White"/>
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
-            <Grid Grid.Row="4" Background="#2E4053">
+            <Grid Grid.Row="5" Background="#2E4053">
                 <Button Height="69"  Background="#2E4053" BorderBrush="#2E4053"
                        x:Name="btnReport" Click="btnReport_Click">
                 </Button>
@@ -83,7 +95,7 @@
                            Margin="90,0,0,0" MouseDown="btnReport_Click"/>
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
-            <Grid Grid.Row="5" Background="#2E4053">
+            <Grid Grid.Row="6" Background="#2E4053">
                 <Button Height="69"  Background="#2E4053" BorderBrush="#2E4053"
                         x:Name="btnControl" Click="btnManualControl_Click">
                 </Button>
@@ -93,7 +105,7 @@
                            Margin="90,0,0,0" MouseDown="btnManualControl_Click"/>
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
-            <Grid Grid.Row="7" Background="#2E4053">
+            <Grid Grid.Row="8" Background="#2E4053">
                 <Button Height="69"  Background="#2E4053" BorderBrush="#2E4053"
                         x:Name="btnSetting" Click="btnSetting_Click">
                 </Button>
@@ -104,7 +116,7 @@
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
 
-            <Grid Grid.Row="6" Background="#2E4053">
+            <Grid Grid.Row="7" Background="#2E4053">
                 <Button Height="75" x:Name="btnHelp" Click="btnHelp_Click"  VerticalAlignment="Top"
                         Background="#2E4053" BorderBrush="#2E4053">
                 </Button>
@@ -115,7 +127,7 @@
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
 
-            <Grid Grid.Row="8" Background="#2E4053">
+            <Grid Grid.Row="9" Background="#2E4053">
                 <Button Height="69" x:Name="btnExit" Click="btnExit_Click"  VerticalAlignment="Top"
                         Background="#2E4053" BorderBrush="#2E4053" >
                 </Button>
@@ -125,12 +137,12 @@
                                Foreground="White" MouseDown="btnExit_Click"/>
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
-            <Grid Grid.Row="9" Background="#2E4053">
+            <Grid Grid.Row="10" Background="#2E4053">
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
 
             </Grid>
 
-            <Grid Grid.Row="10" Background="#2E4053">
+            <Grid Grid.Row="11" Background="#2E4053">
                 <Image Source=".\Resources\Logo user.png"
                        Width="60" HorizontalAlignment="Left"/>
                 <TextBlock x:Name="lblUser" Text="FEE_Automation" Foreground="White" FontSize="12" Height="15" Margin="60,0,0,0"/>

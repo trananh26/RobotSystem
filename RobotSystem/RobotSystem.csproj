@@ -249,6 +249,18 @@
   <ItemGroup>
     <Resource Include="ACS.ico" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BL.RobotSystem\BL.RobotSystem.csproj">
+      <Project>{9f88deb5-c933-4802-bdaa-71d7536ba9ca}</Project>
+      <Name>BL.RobotSystem</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Common.RobotSystem\Common.RobotSystem.csproj">
+      <Project>{a6282645-ccde-43d5-bec0-cffda07b9f6f}</Project>
+      <Name>Common.RobotSystem</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
