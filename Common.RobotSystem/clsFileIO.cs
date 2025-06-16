@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Common.RobotSystem
 {
-    public class Class1
+    internal class clsFileIO
     {
     }
 }

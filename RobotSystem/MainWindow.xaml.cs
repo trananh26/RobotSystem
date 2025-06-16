@@ -434,5 +434,10 @@ namespace RobotSystem
         {
 
         }
+
+        private void btnAGV_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
