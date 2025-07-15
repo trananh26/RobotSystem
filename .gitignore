@@ -41,3 +41,89 @@
 /RobotSystem/obj/Debug/RobotSystem_MarkupCompile.i.lref
 /packages
 /Common.RobotSystem/obj/Debug/Common.RobotSystem.csproj.AssemblyReference.cache
+
+
+# Ignore Visual Studio temporary files, build results, and sensitive data
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Test Results & Reports
+*.trx
+*.tmp
+TestResults/
+
+# NuGet Packages & Project Artifacts
+*.nupkg
+*.nupkg.metadata
+*.nuget.props
+packages/
+.nuget/
+
+# Visual Studio Cache & Directory Info
+.vs/
+.vscode/
+.ionide/
+
+# Windows & System Files
+[Tt]humbs.db
+*.DS_Store
+desktop.ini
+
+# MSBuild & .NET CLI Output
+**/bin/**
+**/obj/**
+*.bak
+*.cache
+*.lock
+
+# ReSharper & Rider Cache
+.idea/
+.idea/*
+!.idea/.gitignore
+!.idea/codeStyles/
+.teamcity/
+
+# JetBrains Rider-specific
+.idea/rider*.xml
+
+# Unity (if applicable)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emory[Cc]aptures/
+
+# Unity Assets & Metadata (optional)
+# If you're using git LFS for large files (e.g., textures), uncomment:
+# *.meta
+# *.unity
+# *.prefab
+# *.asset
+
+# Mono & Local History
+*.db
+*.pidb
+*.orig
+
+# dotnet CLI Preview Caches
+.dotnet/
+
+# Local History for Visual Studio
+.localhistory/
