@@ -42,6 +42,7 @@
 /packages
 /Common.RobotSystem/obj/Debug/Common.RobotSystem.csproj.AssemblyReference.cache
 
+.vs/
 
 # Ignore Visual Studio temporary files, build results, and sensitive data
 *.suo
