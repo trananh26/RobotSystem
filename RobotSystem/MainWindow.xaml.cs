@@ -341,12 +341,27 @@ namespace RobotSystem
         {
             try
             {
-                string modelPath = ConfigurationManager.AppSettings["OnnxModelPath"] ?? "best.onnx";
-                modelPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, modelPath);
-                if (!File.Exists(modelPath))
+                string modelPath = ConfigurationManager.AppSettings["ModelPath"] ?? AppDomain.CurrentDomain.BaseDirectory;
+                string onnxModelPath = System.IO.Path.Combine(modelPath, "best.onnx");
+                if (!File.Exists(onnxModelPath))
                 {
                     MessageBox.Show("Không tìm thấy file best.onnx!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
+                }
+
+                // Load class names from classes.txt
+                string classesPath = System.IO.Path.Combine(modelPath, "classes.txt");
+                string[] classNames = null;
+
+                if (File.Exists(classesPath))
+                {
+                    classNames = File.ReadAllLines(classesPath)
+                        .Where(line => !string.IsNullOrWhiteSpace(line))
+                        .ToArray();
+                }
+                else
+                {
+                    MessageBox.Show("Không tìm thấy file classes.txt!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
 
                 using (var img = new Bitmap(imagePath))
@@ -367,7 +382,7 @@ namespace RobotSystem
                             }
                         }
 
-                        using (var session = new InferenceSession(modelPath))
+                        using (var session = new InferenceSession(onnxModelPath))
                         {
                             var inputs = new List<NamedOnnxValue>
                             {
@@ -393,17 +408,17 @@ namespace RobotSystem
                                         // Format [1, N, attrs]
                                         int numDetections = dims[1];
                                         int numAttrs = dims[2];
-                                        
+
                                         for (int i = 0; i < numDetections; i++)
                                         {
                                             // YOLOv11L thường có format [x_center, y_center, width, height, ...classes]
                                             // Nhưng có thể normalized về [0,1] hoặc pixel coordinates
-                                            
+
                                             float x_center = outputTensor[0, i, 0];
                                             float y_center = outputTensor[0, i, 1];
                                             float width = outputTensor[0, i, 2];
                                             float height = outputTensor[0, i, 3];
-                                            
+
                                             // Tìm class có confidence cao nhất
                                             int classId = -1;
                                             float maxClassConf = 0;
@@ -416,10 +431,10 @@ namespace RobotSystem
                                                     classId = c - 4;
                                                 }
                                             }
-                                            
+
                                             // Kiểm tra threshold
                                             if (maxClassConf < 0.5f) continue;
-                                            
+
                                             // Chuyển đổi tọa độ - kiểm tra nếu đã normalized
                                             float x_real, y_real, w_real, h_real;
                                             if (x_center <= 1.0f && y_center <= 1.0f && width <= 1.0f && height <= 1.0f)
@@ -438,33 +453,44 @@ namespace RobotSystem
                                                 w_real = width * img.Width / inputWidth;
                                                 h_real = height * img.Height / inputHeight;
                                             }
-                                            
+
                                             // Tính tọa độ góc trên trái
                                             float x1 = x_real - w_real / 2;
                                             float y1 = y_real - h_real / 2;
-                                            
+
                                             // Đảm bảo tọa độ hợp lệ
                                             x1 = Math.Max(0, x1);
                                             y1 = Math.Max(0, y1);
                                             w_real = Math.Min(w_real, img.Width - x1);
                                             h_real = Math.Min(h_real, img.Height - y1);
-                                            
+
                                             if (w_real <= 0 || h_real <= 0) continue;
-                                            
+
                                             var rect = new System.Drawing.Rectangle((int)x1, (int)y1, (int)w_real, (int)h_real);
                                             g.DrawRectangle(Pens.Lime, rect);
-                                            
+
+                                            // Get class name from classes.txt or use fallback
+                                            string className = "Unknown";
+                                            if (classNames != null && classId >= 0 && classId < classNames.Length)
+                                            {
+                                                className = classNames[classId];
+                                            }
+                                            else if (classNames == null)
+                                            {
+                                                className = $"Class {classId}";
+                                            }
+
                                             // Vẽ label
-                                            string label = $"Class {classId} {maxClassConf:0.00}";
+                                            string label = $"{className} {maxClassConf:0.00}";
                                             var font = new Font("Arial", 12, System.Drawing.FontStyle.Bold);
                                             var textSize = g.MeasureString(label, font);
                                             var textRect = new System.Drawing.RectangleF(x1, y1 - textSize.Height, textSize.Width, textSize.Height);
                                             g.FillRectangle(System.Drawing.Brushes.Black, textRect);
                                             g.DrawString(label, font, System.Drawing.Brushes.Lime, x1, y1 - textSize.Height);
-                                            
+
                                             detected.Add(new
                                             {
-                                                ComponentType = $"Class {classId}",
+                                                ComponentType = className,
                                                 Confidence = maxClassConf,
                                                 Location = new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height)
                                             });
@@ -475,14 +501,14 @@ namespace RobotSystem
                                         // Format [N, attrs] - xử lý tương tự nhưng không có batch dimension
                                         int numDetections = dims[0];
                                         int numAttrs = dims[1];
-                                        
+
                                         for (int i = 0; i < numDetections; i++)
                                         {
                                             float x_center = outputTensor[i, 0];
                                             float y_center = outputTensor[i, 1];
                                             float width = outputTensor[i, 2];
                                             float height = outputTensor[i, 3];
-                                            
+
                                             // Tìm class có confidence cao nhất
                                             int classId = -1;
                                             float maxClassConf = 0;
@@ -495,9 +521,9 @@ namespace RobotSystem
                                                     classId = c - 4;
                                                 }
                                             }
-                                            
+
                                             if (maxClassConf < 0.5f) continue;
-                                            
+
                                             // Chuyển đổi tọa độ
                                             float x_real, y_real, w_real, h_real;
                                             if (x_center <= 1.0f && y_center <= 1.0f && width <= 1.0f && height <= 1.0f)
@@ -514,37 +540,48 @@ namespace RobotSystem
                                                 w_real = width * img.Width / inputWidth;
                                                 h_real = height * img.Height / inputHeight;
                                             }
-                                            
+
                                             float x1 = x_real - w_real / 2;
                                             float y1 = y_real - h_real / 2;
-                                            
+
                                             x1 = Math.Max(0, x1);
                                             y1 = Math.Max(0, y1);
                                             w_real = Math.Min(w_real, img.Width - x1);
                                             h_real = Math.Min(h_real, img.Height - y1);
-                                            
+
                                             if (w_real <= 0 || h_real <= 0) continue;
-                                            
+
                                             var rect = new System.Drawing.Rectangle((int)x1, (int)y1, (int)w_real, (int)h_real);
                                             g.DrawRectangle(Pens.Lime, rect);
-                                            
-                                            string label = $"Class {classId} {maxClassConf:0.00}";
+
+                                            // Get class name from classes.txt or use fallback
+                                            string className = "Unknown";
+                                            if (classNames != null && classId >= 0 && classId < classNames.Length)
+                                            {
+                                                className = classNames[classId];
+                                            }
+                                            else if (classNames == null)
+                                            {
+                                                className = $"Class {classId}";
+                                            }
+
+                                            string label = $"{className} {maxClassConf:0.00}";
                                             var font = new Font("Arial", 12, System.Drawing.FontStyle.Bold);
                                             var textSize = g.MeasureString(label, font);
                                             var textRect = new System.Drawing.RectangleF(x1, y1 - textSize.Height, textSize.Width, textSize.Height);
                                             g.FillRectangle(System.Drawing.Brushes.Black, textRect);
                                             g.DrawString(label, font, System.Drawing.Brushes.Lime, x1, y1 - textSize.Height);
-                                            
+
                                             detected.Add(new
                                             {
-                                                ComponentType = $"Class {classId}",
+                                                ComponentType = className,
                                                 Confidence = maxClassConf,
                                                 Location = new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height)
                                             });
                                         }
                                     }
                                 }
-                                
+
                                 img_InputImage.Source = ConvertToBitmapSource(img);
                                 dtg_Result.ItemsSource = detected;
                             }
