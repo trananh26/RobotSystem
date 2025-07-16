@@ -22,8 +22,11 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Util;
 using System.IO;
 using System.Text.Json;
+using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime.Tensors;
 using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
+using System.Configuration;
 
 namespace RobotSystem
 {
@@ -76,7 +79,7 @@ namespace RobotSystem
             try
             {
                 filterInfo = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-                
+
                 if (filterInfo.Count == 0)
                 {
                     MessageBox.Show("Không tìm thấy thiết bị camera nào!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -338,52 +341,215 @@ namespace RobotSystem
         {
             try
             {
-                if (!Directory.Exists(templateFolder))
+                string modelPath = ConfigurationManager.AppSettings["OnnxModelPath"] ?? "best.onnx";
+                modelPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, modelPath);
+                if (!File.Exists(modelPath))
                 {
-                    MessageBox.Show("Chưa có dữ liệu template!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Không tìm thấy file best.onnx!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-                var templateFiles = Directory.GetFiles(templateFolder, "*.png");
-                if (templateFiles.Length == 0)
-                {
-                    MessageBox.Show("Không có template nào!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                using (Image<Bgr, byte> img = new Image<Bgr, byte>(imagePath))
-                {
-                    var results = new List<object>();
-                    var rectsToDraw = new List<(string label, System.Drawing.Rectangle rect)>();
-                    foreach (var file in templateFiles)
-                    {
-                        string label = System.IO.Path.GetFileName(file).Split('_')[0];
-                        using (Image<Bgr, byte> template = new Image<Bgr, byte>(file))
-                        {
-                            using (Image<Gray, float> result = img.MatchTemplate(template, TemplateMatchingType.CcoeffNormed))
-                            {
-                                double minVal = 0, maxVal = 0;
-                                System.Drawing.Point minLoc = new System.Drawing.Point(), maxLoc = new System.Drawing.Point();
-                                CvInvoke.MinMaxLoc(result, ref minVal, ref maxVal, ref minLoc, ref maxLoc);
-                                if (maxVal > 0.8)
-                                {
-                                    // Vẽ rectangle lên ảnh gốc
-                                    CvInvoke.Rectangle(
-                                        img,
-                                        new System.Drawing.Rectangle(maxLoc.X, maxLoc.Y, template.Width, template.Height),
-                                        new MCvScalar(0, 255, 0), 2);
 
-                                    results.Add(new
+                using (var img = new Bitmap(imagePath))
+                {
+                    int inputWidth = 640;
+                    int inputHeight = 640;
+                    using (var resized = new Bitmap(img, new System.Drawing.Size(inputWidth, inputHeight)))
+                    {
+                        var input = new DenseTensor<float>(new[] { 1, 3, inputHeight, inputWidth });
+                        for (int y = 0; y < inputHeight; y++)
+                        {
+                            for (int x = 0; x < inputWidth; x++)
+                            {
+                                var pixel = resized.GetPixel(x, y);
+                                input[0, 0, y, x] = pixel.R / 255.0f;
+                                input[0, 1, y, x] = pixel.G / 255.0f;
+                                input[0, 2, y, x] = pixel.B / 255.0f;
+                            }
+                        }
+
+                        using (var session = new InferenceSession(modelPath))
+                        {
+                            var inputs = new List<NamedOnnxValue>
+                            {
+                                NamedOnnxValue.CreateFromTensor("images", input)
+                            };
+
+                            using (var results = session.Run(inputs))
+                            {
+                                // Get output tensor và hiển thị shape để debug
+                                var outputTensor = results.First().AsTensor<float>();
+                                var dims = outputTensor.Dimensions.ToArray();
+
+                                // Debug: In ra shape để xác nhận
+                                string shapeStr = string.Join(", ", dims);
+                                MessageBox.Show($"Output shape: [{shapeStr}]", "Debug Shape", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                                var detected = new List<object>();
+                                using (var g = Graphics.FromImage(img))
+                                {
+                                    // Kiểm tra format output
+                                    if (dims.Length == 3)
                                     {
-                                        ComponentType = label,
-                                        Confidence = maxVal,
-                                        Location = new System.Windows.Rect(maxLoc.X, maxLoc.Y, template.Width, template.Height)
-                                    });
-                                    rectsToDraw.Add((label, new System.Drawing.Rectangle(maxLoc.X, maxLoc.Y, template.Width, template.Height)));
+                                        // Format [1, N, attrs]
+                                        int numDetections = dims[1];
+                                        int numAttrs = dims[2];
+                                        
+                                        for (int i = 0; i < numDetections; i++)
+                                        {
+                                            // YOLOv11L thường có format [x_center, y_center, width, height, ...classes]
+                                            // Nhưng có thể normalized về [0,1] hoặc pixel coordinates
+                                            
+                                            float x_center = outputTensor[0, i, 0];
+                                            float y_center = outputTensor[0, i, 1];
+                                            float width = outputTensor[0, i, 2];
+                                            float height = outputTensor[0, i, 3];
+                                            
+                                            // Tìm class có confidence cao nhất
+                                            int classId = -1;
+                                            float maxClassConf = 0;
+                                            for (int c = 4; c < numAttrs; c++)
+                                            {
+                                                float conf = outputTensor[0, i, c];
+                                                if (conf > maxClassConf)
+                                                {
+                                                    maxClassConf = conf;
+                                                    classId = c - 4;
+                                                }
+                                            }
+                                            
+                                            // Kiểm tra threshold
+                                            if (maxClassConf < 0.5f) continue;
+                                            
+                                            // Chuyển đổi tọa độ - kiểm tra nếu đã normalized
+                                            float x_real, y_real, w_real, h_real;
+                                            if (x_center <= 1.0f && y_center <= 1.0f && width <= 1.0f && height <= 1.0f)
+                                            {
+                                                // Coordinates are normalized [0,1]
+                                                x_real = x_center * img.Width;
+                                                y_real = y_center * img.Height;
+                                                w_real = width * img.Width;
+                                                h_real = height * img.Height;
+                                            }
+                                            else
+                                            {
+                                                // Coordinates are in input resolution
+                                                x_real = x_center * img.Width / inputWidth;
+                                                y_real = y_center * img.Height / inputHeight;
+                                                w_real = width * img.Width / inputWidth;
+                                                h_real = height * img.Height / inputHeight;
+                                            }
+                                            
+                                            // Tính tọa độ góc trên trái
+                                            float x1 = x_real - w_real / 2;
+                                            float y1 = y_real - h_real / 2;
+                                            
+                                            // Đảm bảo tọa độ hợp lệ
+                                            x1 = Math.Max(0, x1);
+                                            y1 = Math.Max(0, y1);
+                                            w_real = Math.Min(w_real, img.Width - x1);
+                                            h_real = Math.Min(h_real, img.Height - y1);
+                                            
+                                            if (w_real <= 0 || h_real <= 0) continue;
+                                            
+                                            var rect = new System.Drawing.Rectangle((int)x1, (int)y1, (int)w_real, (int)h_real);
+                                            g.DrawRectangle(Pens.Lime, rect);
+                                            
+                                            // Vẽ label
+                                            string label = $"Class {classId} {maxClassConf:0.00}";
+                                            var font = new Font("Arial", 12, System.Drawing.FontStyle.Bold);
+                                            var textSize = g.MeasureString(label, font);
+                                            var textRect = new System.Drawing.RectangleF(x1, y1 - textSize.Height, textSize.Width, textSize.Height);
+                                            g.FillRectangle(System.Drawing.Brushes.Black, textRect);
+                                            g.DrawString(label, font, System.Drawing.Brushes.Lime, x1, y1 - textSize.Height);
+                                            
+                                            detected.Add(new
+                                            {
+                                                ComponentType = $"Class {classId}",
+                                                Confidence = maxClassConf,
+                                                Location = new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height)
+                                            });
+                                        }
+                                    }
+                                    else if (dims.Length == 2)
+                                    {
+                                        // Format [N, attrs] - xử lý tương tự nhưng không có batch dimension
+                                        int numDetections = dims[0];
+                                        int numAttrs = dims[1];
+                                        
+                                        for (int i = 0; i < numDetections; i++)
+                                        {
+                                            float x_center = outputTensor[i, 0];
+                                            float y_center = outputTensor[i, 1];
+                                            float width = outputTensor[i, 2];
+                                            float height = outputTensor[i, 3];
+                                            
+                                            // Tìm class có confidence cao nhất
+                                            int classId = -1;
+                                            float maxClassConf = 0;
+                                            for (int c = 4; c < numAttrs; c++)
+                                            {
+                                                float conf = outputTensor[i, c];
+                                                if (conf > maxClassConf)
+                                                {
+                                                    maxClassConf = conf;
+                                                    classId = c - 4;
+                                                }
+                                            }
+                                            
+                                            if (maxClassConf < 0.5f) continue;
+                                            
+                                            // Chuyển đổi tọa độ
+                                            float x_real, y_real, w_real, h_real;
+                                            if (x_center <= 1.0f && y_center <= 1.0f && width <= 1.0f && height <= 1.0f)
+                                            {
+                                                x_real = x_center * img.Width;
+                                                y_real = y_center * img.Height;
+                                                w_real = width * img.Width;
+                                                h_real = height * img.Height;
+                                            }
+                                            else
+                                            {
+                                                x_real = x_center * img.Width / inputWidth;
+                                                y_real = y_center * img.Height / inputHeight;
+                                                w_real = width * img.Width / inputWidth;
+                                                h_real = height * img.Height / inputHeight;
+                                            }
+                                            
+                                            float x1 = x_real - w_real / 2;
+                                            float y1 = y_real - h_real / 2;
+                                            
+                                            x1 = Math.Max(0, x1);
+                                            y1 = Math.Max(0, y1);
+                                            w_real = Math.Min(w_real, img.Width - x1);
+                                            h_real = Math.Min(h_real, img.Height - y1);
+                                            
+                                            if (w_real <= 0 || h_real <= 0) continue;
+                                            
+                                            var rect = new System.Drawing.Rectangle((int)x1, (int)y1, (int)w_real, (int)h_real);
+                                            g.DrawRectangle(Pens.Lime, rect);
+                                            
+                                            string label = $"Class {classId} {maxClassConf:0.00}";
+                                            var font = new Font("Arial", 12, System.Drawing.FontStyle.Bold);
+                                            var textSize = g.MeasureString(label, font);
+                                            var textRect = new System.Drawing.RectangleF(x1, y1 - textSize.Height, textSize.Width, textSize.Height);
+                                            g.FillRectangle(System.Drawing.Brushes.Black, textRect);
+                                            g.DrawString(label, font, System.Drawing.Brushes.Lime, x1, y1 - textSize.Height);
+                                            
+                                            detected.Add(new
+                                            {
+                                                ComponentType = $"Class {classId}",
+                                                Confidence = maxClassConf,
+                                                Location = new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height)
+                                            });
+                                        }
+                                    }
                                 }
+                                
+                                img_InputImage.Source = ConvertToBitmapSource(img);
+                                dtg_Result.ItemsSource = detected;
                             }
                         }
                     }
-                    img_InputImage.Source = ConvertToBitmapSource(img.ToBitmap());
-                    dtg_Result.ItemsSource = results;
                 }
             }
             catch (Exception ex)
