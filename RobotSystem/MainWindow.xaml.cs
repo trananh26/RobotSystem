@@ -360,55 +360,65 @@ namespace RobotSystem
                 }
 
                 using (var session = new InferenceSession(onnxModelPath))
-                using (var originalBmp = new Bitmap(imagePath))
                 {
-                    var inputTensor = PreprocessImage(originalBmp);
-                    var inputs = new List<NamedOnnxValue>
+                    // Đọc thông tin output từ model
+                    var outputName = session.OutputNames.First();
+                    session.OutputMetadata.TryGetValue(outputName, out var outputMetadata);
+
+                    var elementType = outputMetadata.ElementType;
+                    var dimensions = outputMetadata.Dimensions;
+                    string dimString = string.Join(", ", dimensions.Select(d => d.ToString()));
+
+                    using (var originalBmp = new Bitmap(imagePath))
+                    {
+                        var inputTensor = PreprocessImage(originalBmp);
+                        var inputs = new List<NamedOnnxValue>
                     {
                         NamedOnnxValue.CreateFromTensor("images", inputTensor)
                     };
 
-                    using (var results = session.Run(inputs))
-                    {
-                        var outputTensor = results.First().AsTensor<float>();
-                        var foobar = JsonSerializer.Serialize(outputTensor);
-                        var detected = new List<object>();
-                        int batchSize = outputTensor.Dimensions[0];
-                        int numDetections = outputTensor.Dimensions[1];
-                        int anchors = outputTensor.Dimensions[2];
-
-                        for (int b = 0; b < batchSize; b++)
+                        using (var results = session.Run(inputs))
                         {
-                            for (int i = 0; i < numDetections; i++)
+                            var outputTensor = results.First().AsTensor<float>();
+                            var foobar = JsonSerializer.Serialize(outputTensor);
+                            var detected = new List<object>();
+                            int batchSize = outputTensor.Dimensions[0];
+                            int numDetections = outputTensor.Dimensions[1];
+                            int anchors = outputTensor.Dimensions[2];
+
+                            for (int b = 0; b < batchSize; b++)
                             {
-                                if (anchors >= 6)
+                                for (int i = 0; i < numDetections; i++)
                                 {
-                                    float x1 = outputTensor[b, i, 0];
-                                    float y1 = outputTensor[b, i, 1];
-                                    float x2 = outputTensor[b, i, 2];
-                                    float y2 = outputTensor[b, i, 3];
-                                    float conf = outputTensor[b, i, 4];
-                                    int classId = (int)outputTensor[b, i, 5];
-
-                                    if (conf > 0.5f)
+                                    if (anchors >= 6)
                                     {
-                                        string className = "Unknown";
-                                        if (classNames != null && classId >= 0 && classId < classNames.Length)
-                                            className = classNames[classId];
+                                        float x1 = outputTensor[b, i, 0];
+                                        float y1 = outputTensor[b, i, 1];
+                                        float x2 = outputTensor[b, i, 2];
+                                        float y2 = outputTensor[b, i, 3];
+                                        float conf = outputTensor[b, i, 4];
+                                        int classId = (int)outputTensor[b, i, 5];
 
-                                        detected.Add(new
+                                        if (conf > 0.5f)
                                         {
-                                            STT = detected.Count + 1,
-                                            ComponentType = className,
-                                            Confidence = $"{conf}"
-                                        });
+                                            string className = "Unknown";
+                                            if (classNames != null && classId >= 0 && classId < classNames.Length)
+                                                className = classNames[classId];
+
+                                            detected.Add(new
+                                            {
+                                                STT = detected.Count + 1,
+                                                ComponentType = className,
+                                                Confidence = $"{conf}"
+                                            });
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        img_InputImage.Source = ConvertToBitmapSource(originalBmp);
-                        dtg_Result.ItemsSource = detected;
+                            img_InputImage.Source = ConvertToBitmapSource(originalBmp);
+                            dtg_Result.ItemsSource = detected;
+                        }
                     }
                 }
             }
