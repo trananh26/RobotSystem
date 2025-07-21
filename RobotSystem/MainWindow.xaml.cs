@@ -343,255 +343,102 @@ namespace RobotSystem
             {
                 string modelPath = ConfigurationManager.AppSettings["ModelPath"] ?? AppDomain.CurrentDomain.BaseDirectory;
                 string onnxModelPath = System.IO.Path.Combine(modelPath, "best.onnx");
+
                 if (!File.Exists(onnxModelPath))
                 {
                     MessageBox.Show("Không tìm thấy file best.onnx!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                // Load class names from classes.txt
                 string classesPath = System.IO.Path.Combine(modelPath, "classes.txt");
                 string[] classNames = null;
-
                 if (File.Exists(classesPath))
                 {
                     classNames = File.ReadAllLines(classesPath)
                         .Where(line => !string.IsNullOrWhiteSpace(line))
                         .ToArray();
                 }
-                else
-                {
-                    MessageBox.Show("Không tìm thấy file classes.txt!", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
 
-                using (var img = new Bitmap(imagePath))
+                using (var session = new InferenceSession(onnxModelPath))
+                using (var originalBmp = new Bitmap(imagePath))
                 {
-                    int inputWidth = 640;
-                    int inputHeight = 640;
-                    using (var resized = new Bitmap(img, new System.Drawing.Size(inputWidth, inputHeight)))
+                    var inputTensor = PreprocessImage(originalBmp);
+                    var inputs = new List<NamedOnnxValue>
                     {
-                        var input = new DenseTensor<float>(new[] { 1, 3, inputHeight, inputWidth });
-                        for (int y = 0; y < inputHeight; y++)
+                        NamedOnnxValue.CreateFromTensor("images", inputTensor)
+                    };
+
+                    using (var results = session.Run(inputs))
+                    {
+                        var outputTensor = results.First().AsTensor<float>();
+                        var foobar = JsonSerializer.Serialize(outputTensor);
+                        var detected = new List<object>();
+                        int batchSize = outputTensor.Dimensions[0];
+                        int numDetections = outputTensor.Dimensions[1];
+                        int anchors = outputTensor.Dimensions[2];
+
+                        for (int b = 0; b < batchSize; b++)
                         {
-                            for (int x = 0; x < inputWidth; x++)
+                            for (int i = 0; i < numDetections; i++)
                             {
-                                var pixel = resized.GetPixel(x, y);
-                                input[0, 0, y, x] = pixel.R / 255.0f;
-                                input[0, 1, y, x] = pixel.G / 255.0f;
-                                input[0, 2, y, x] = pixel.B / 255.0f;
-                            }
-                        }
-
-                        using (var session = new InferenceSession(onnxModelPath))
-                        {
-                            var inputs = new List<NamedOnnxValue>
-                            {
-                                NamedOnnxValue.CreateFromTensor("images", input)
-                            };
-
-                            using (var results = session.Run(inputs))
-                            {
-                                // Get output tensor và hiển thị shape để debug
-                                var outputTensor = results.First().AsTensor<float>();
-                                var dims = outputTensor.Dimensions.ToArray();
-
-                                // Debug: In ra shape để xác nhận
-                                string shapeStr = string.Join(", ", dims);
-                                MessageBox.Show($"Output shape: [{shapeStr}]", "Debug Shape", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                                var detected = new List<object>();
-                                using (var g = Graphics.FromImage(img))
+                                if (anchors >= 6)
                                 {
-                                    // Kiểm tra format output
-                                    if (dims.Length == 3)
+                                    float x1 = outputTensor[b, i, 0];
+                                    float y1 = outputTensor[b, i, 1];
+                                    float x2 = outputTensor[b, i, 2];
+                                    float y2 = outputTensor[b, i, 3];
+                                    float conf = outputTensor[b, i, 4];
+                                    int classId = (int)outputTensor[b, i, 5];
+
+                                    if (conf > 0.5f)
                                     {
-                                        // Format [1, N, attrs]
-                                        int numDetections = dims[1];
-                                        int numAttrs = dims[2];
+                                        string className = "Unknown";
+                                        if (classNames != null && classId >= 0 && classId < classNames.Length)
+                                            className = classNames[classId];
 
-                                        for (int i = 0; i < numDetections; i++)
+                                        detected.Add(new
                                         {
-                                            // YOLOv11L thường có format [x_center, y_center, width, height, ...classes]
-                                            // Nhưng có thể normalized về [0,1] hoặc pixel coordinates
-
-                                            float x_center = outputTensor[0, i, 0];
-                                            float y_center = outputTensor[0, i, 1];
-                                            float width = outputTensor[0, i, 2];
-                                            float height = outputTensor[0, i, 3];
-
-                                            // Tìm class có confidence cao nhất
-                                            int classId = -1;
-                                            float maxClassConf = 0;
-                                            for (int c = 4; c < numAttrs; c++)
-                                            {
-                                                float conf = outputTensor[0, i, c];
-                                                if (conf > maxClassConf)
-                                                {
-                                                    maxClassConf = conf;
-                                                    classId = c - 4;
-                                                }
-                                            }
-
-                                            // Kiểm tra threshold
-                                            if (maxClassConf < 0.5f) continue;
-
-                                            // Chuyển đổi tọa độ - kiểm tra nếu đã normalized
-                                            float x_real, y_real, w_real, h_real;
-                                            if (x_center <= 1.0f && y_center <= 1.0f && width <= 1.0f && height <= 1.0f)
-                                            {
-                                                // Coordinates are normalized [0,1]
-                                                x_real = x_center * img.Width;
-                                                y_real = y_center * img.Height;
-                                                w_real = width * img.Width;
-                                                h_real = height * img.Height;
-                                            }
-                                            else
-                                            {
-                                                // Coordinates are in input resolution
-                                                x_real = x_center * img.Width / inputWidth;
-                                                y_real = y_center * img.Height / inputHeight;
-                                                w_real = width * img.Width / inputWidth;
-                                                h_real = height * img.Height / inputHeight;
-                                            }
-
-                                            // Tính tọa độ góc trên trái
-                                            float x1 = x_real - w_real / 2;
-                                            float y1 = y_real - h_real / 2;
-
-                                            // Đảm bảo tọa độ hợp lệ
-                                            x1 = Math.Max(0, x1);
-                                            y1 = Math.Max(0, y1);
-                                            w_real = Math.Min(w_real, img.Width - x1);
-                                            h_real = Math.Min(h_real, img.Height - y1);
-
-                                            if (w_real <= 0 || h_real <= 0) continue;
-
-                                            var rect = new System.Drawing.Rectangle((int)x1, (int)y1, (int)w_real, (int)h_real);
-                                            g.DrawRectangle(Pens.Lime, rect);
-
-                                            // Get class name from classes.txt or use fallback
-                                            string className = "Unknown";
-                                            if (classNames != null && classId >= 0 && classId < classNames.Length)
-                                            {
-                                                className = classNames[classId];
-                                            }
-                                            else if (classNames == null)
-                                            {
-                                                className = $"Class {classId}";
-                                            }
-
-                                            // Vẽ label
-                                            string label = $"{className} {maxClassConf:0.00}";
-                                            var font = new Font("Arial", 12, System.Drawing.FontStyle.Bold);
-                                            var textSize = g.MeasureString(label, font);
-                                            var textRect = new System.Drawing.RectangleF(x1, y1 - textSize.Height, textSize.Width, textSize.Height);
-                                            g.FillRectangle(System.Drawing.Brushes.Black, textRect);
-                                            g.DrawString(label, font, System.Drawing.Brushes.Lime, x1, y1 - textSize.Height);
-
-                                            detected.Add(new
-                                            {
-                                                ComponentType = className,
-                                                Confidence = maxClassConf,
-                                                Location = new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height)
-                                            });
-                                        }
-                                    }
-                                    else if (dims.Length == 2)
-                                    {
-                                        // Format [N, attrs] - xử lý tương tự nhưng không có batch dimension
-                                        int numDetections = dims[0];
-                                        int numAttrs = dims[1];
-
-                                        for (int i = 0; i < numDetections; i++)
-                                        {
-                                            float x_center = outputTensor[i, 0];
-                                            float y_center = outputTensor[i, 1];
-                                            float width = outputTensor[i, 2];
-                                            float height = outputTensor[i, 3];
-
-                                            // Tìm class có confidence cao nhất
-                                            int classId = -1;
-                                            float maxClassConf = 0;
-                                            for (int c = 4; c < numAttrs; c++)
-                                            {
-                                                float conf = outputTensor[i, c];
-                                                if (conf > maxClassConf)
-                                                {
-                                                    maxClassConf = conf;
-                                                    classId = c - 4;
-                                                }
-                                            }
-
-                                            if (maxClassConf < 0.5f) continue;
-
-                                            // Chuyển đổi tọa độ
-                                            float x_real, y_real, w_real, h_real;
-                                            if (x_center <= 1.0f && y_center <= 1.0f && width <= 1.0f && height <= 1.0f)
-                                            {
-                                                x_real = x_center * img.Width;
-                                                y_real = y_center * img.Height;
-                                                w_real = width * img.Width;
-                                                h_real = height * img.Height;
-                                            }
-                                            else
-                                            {
-                                                x_real = x_center * img.Width / inputWidth;
-                                                y_real = y_center * img.Height / inputHeight;
-                                                w_real = width * img.Width / inputWidth;
-                                                h_real = height * img.Height / inputHeight;
-                                            }
-
-                                            float x1 = x_real - w_real / 2;
-                                            float y1 = y_real - h_real / 2;
-
-                                            x1 = Math.Max(0, x1);
-                                            y1 = Math.Max(0, y1);
-                                            w_real = Math.Min(w_real, img.Width - x1);
-                                            h_real = Math.Min(h_real, img.Height - y1);
-
-                                            if (w_real <= 0 || h_real <= 0) continue;
-
-                                            var rect = new System.Drawing.Rectangle((int)x1, (int)y1, (int)w_real, (int)h_real);
-                                            g.DrawRectangle(Pens.Lime, rect);
-
-                                            // Get class name from classes.txt or use fallback
-                                            string className = "Unknown";
-                                            if (classNames != null && classId >= 0 && classId < classNames.Length)
-                                            {
-                                                className = classNames[classId];
-                                            }
-                                            else if (classNames == null)
-                                            {
-                                                className = $"Class {classId}";
-                                            }
-
-                                            string label = $"{className} {maxClassConf:0.00}";
-                                            var font = new Font("Arial", 12, System.Drawing.FontStyle.Bold);
-                                            var textSize = g.MeasureString(label, font);
-                                            var textRect = new System.Drawing.RectangleF(x1, y1 - textSize.Height, textSize.Width, textSize.Height);
-                                            g.FillRectangle(System.Drawing.Brushes.Black, textRect);
-                                            g.DrawString(label, font, System.Drawing.Brushes.Lime, x1, y1 - textSize.Height);
-
-                                            detected.Add(new
-                                            {
-                                                ComponentType = className,
-                                                Confidence = maxClassConf,
-                                                Location = new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height)
-                                            });
-                                        }
+                                            STT = detected.Count + 1,
+                                            ComponentType = className,
+                                            Confidence = $"{conf}"
+                                        });
                                     }
                                 }
-
-                                img_InputImage.Source = ConvertToBitmapSource(img);
-                                dtg_Result.ItemsSource = detected;
                             }
                         }
+
+                        img_InputImage.Source = ConvertToBitmapSource(originalBmp);
+                        dtg_Result.ItemsSource = detected;
                     }
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi khi nhận dạng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private DenseTensor<float> PreprocessImage(Bitmap bmp)
+        {
+            int inputWidth = 640;
+            int inputHeight = 640;
+
+            using (var resized = new Bitmap(bmp, new System.Drawing.Size(inputWidth, inputHeight)))
+            {
+                var input = new DenseTensor<float>(new[] { 1, 3, inputHeight, inputWidth });
+
+                for (int y = 0; y < inputHeight; y++)
+                {
+                    for (int x = 0; x < inputWidth; x++)
+                    {
+                        var pixel = resized.GetPixel(x, y);
+                        input[0, 0, y, x] = pixel.R / 255.0f;
+                        input[0, 1, y, x] = pixel.G / 255.0f;
+                        input[0, 2, y, x] = pixel.B / 255.0f;
+                    }
+                }
+
+                return input;
             }
         }
 
