@@ -341,8 +341,7 @@ namespace RobotSystem
         {
             try
             {
-                string modelPath = ConfigurationManager.AppSettings["ModelPath"] ?? AppDomain.CurrentDomain.BaseDirectory;
-                string onnxModelPath = System.IO.Path.Combine(modelPath, "best.onnx");
+                string onnxModelPath = ConfigurationManager.AppSettings["OnnxModelPath"];
 
                 if (!File.Exists(onnxModelPath))
                 {
@@ -350,7 +349,7 @@ namespace RobotSystem
                     return;
                 }
 
-                string classesPath = System.IO.Path.Combine(modelPath, "classes.txt");
+                string classesPath = ConfigurationManager.AppSettings["ClassesModelPath"];
                 string[] classNames = null;
                 if (File.Exists(classesPath))
                 {
@@ -373,9 +372,9 @@ namespace RobotSystem
                     {
                         var inputTensor = PreprocessImage(originalBmp);
                         var inputs = new List<NamedOnnxValue>
-                    {
-                        NamedOnnxValue.CreateFromTensor("images", inputTensor)
-                    };
+                        {
+                            NamedOnnxValue.CreateFromTensor("images", inputTensor)
+                        };
 
                         using (var results = session.Run(inputs))
                         {
@@ -433,22 +432,120 @@ namespace RobotSystem
             int inputWidth = 640;
             int inputHeight = 640;
 
-            using (var resized = new Bitmap(bmp, new System.Drawing.Size(inputWidth, inputHeight)))
-            {
-                var input = new DenseTensor<float>(new[] { 1, 3, inputHeight, inputWidth });
+            // Tính tỷ lệ scale để giữ aspect ratio
+            float scaleX = (float)inputWidth / bmp.Width;
+            float scaleY = (float)inputHeight / bmp.Height;
+            float scale = Math.Min(scaleX, scaleY);
 
-                for (int y = 0; y < inputHeight; y++)
+            int newWidth = (int)(bmp.Width * scale);
+            int newHeight = (int)(bmp.Height * scale);
+
+            // Tạo bitmap mới với kích thước đích và nền đen
+            using (var canvas = new Bitmap(inputWidth, inputHeight))
+            using (var graphics = Graphics.FromImage(canvas))
+            {
+                // Thiết lập chất lượng cao cho resize
+                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+
+                // Tô nền đen (padding)
+                graphics.Clear(System.Drawing.Color.Black);
+
+                // Tính toán vị trí để center ảnh
+                int offsetX = (inputWidth - newWidth) / 2;
+                int offsetY = (inputHeight - newHeight) / 2;
+
+                // Vẽ ảnh đã resize vào center của canvas
+                graphics.DrawImage(bmp, offsetX, offsetY, newWidth, newHeight);
+
+                // Áp dụng các bộ lọc tăng chất lượng ảnh
+                using (var enhanced = ApplyImageEnhancements(canvas))
                 {
-                    for (int x = 0; x < inputWidth; x++)
+                    var input = new DenseTensor<float>(new[] { 1, 3, inputHeight, inputWidth });
+
+                    // Chuyển đổi sang tensor bằng GetPixel (an toàn hơn)
+                    for (int y = 0; y < inputHeight; y++)
                     {
-                        var pixel = resized.GetPixel(x, y);
-                        input[0, 0, y, x] = pixel.R / 255.0f;
-                        input[0, 1, y, x] = pixel.G / 255.0f;
-                        input[0, 2, y, x] = pixel.B / 255.0f;
+                        for (int x = 0; x < inputWidth; x++)
+                        {
+                            var pixel = enhanced.GetPixel(x, y);
+                            // Normalize to [0,1] và sắp xếp theo RGB cho YOLO
+                            input[0, 0, y, x] = pixel.R / 255.0f;
+                            input[0, 1, y, x] = pixel.G / 255.0f;
+                            input[0, 2, y, x] = pixel.B / 255.0f;
+                        }
+                    }
+
+                    return input;
+                }
+            }
+        }
+
+        private Bitmap ApplyImageEnhancements(Bitmap source)
+        {
+            var enhanced = new Bitmap(source.Width, source.Height);
+
+            using (var graphics = Graphics.FromImage(enhanced))
+            {
+                // Tạo ColorMatrix để điều chỉnh contrast và brightness
+                float contrast = 1.2f; // Tăng contrast 20%
+                float brightness = 0.05f; // Tăng độ sáng nhẹ
+                float gamma = 1.0f;
+
+                var colorMatrix = new System.Drawing.Imaging.ColorMatrix(new float[][]
+                {
+                    new float[] {contrast, 0, 0, 0, 0},
+                    new float[] {0, contrast, 0, 0, 0},
+                    new float[] {0, 0, contrast, 0, 0},
+                    new float[] {0, 0, 0, 1, 0},
+                    new float[] {brightness, brightness, brightness, 0, 1}
+                });
+
+                var imageAttributes = new System.Drawing.Imaging.ImageAttributes();
+                imageAttributes.SetColorMatrix(colorMatrix);
+                imageAttributes.SetGamma(gamma);
+
+                graphics.DrawImage(source,
+                    new System.Drawing.Rectangle(0, 0, source.Width, source.Height),
+                    0, 0, source.Width, source.Height,
+                    GraphicsUnit.Pixel, imageAttributes);
+            }
+
+            // Áp dụng unsharp mask để tăng độ nét
+            return ApplyUnsharpMask(enhanced);
+        }
+
+        private Bitmap ApplyUnsharpMask(Bitmap source)
+        {
+            try
+            {
+                // Chuyển đổi Bitmap thành Mat của EmguCV
+                using (var mat = new Mat())
+                {
+                    // Chuyển Bitmap thành Image<Bgr, byte>
+                    using (var tempImage = source.ToImage<Bgr, byte>())
+                    {
+                        // Tạo Gaussian blur
+                        var blurred = tempImage.SmoothGaussian(3);
+
+                        // Tính high-pass filter (original - blurred)
+                        var highpass = tempImage - blurred;
+
+                        // Áp dụng unsharp mask: original + α * highpass
+                        float alpha = 0.5f; // Điều chỉnh độ mạnh của sharpening
+                        var sharpened = tempImage + (highpass * alpha);
+
+                        return sharpened.ToBitmap();
                     }
                 }
-
-                return input;
+            }
+            catch (Exception ex)
+            {
+                // Nếu có lỗi với EmguCV, trả về ảnh gốc
+                System.Diagnostics.Debug.WriteLine($"Lỗi áp dụng unsharp mask: {ex.Message}");
+                return new Bitmap(source);
             }
         }
 
